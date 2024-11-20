@@ -1,0 +1,60 @@
+﻿services:
+  webapi:
+    image: staskyiv/webapi:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_URLS=http://0.0.0.0:8080
+    networks:
+      - default
+
+  angularclient:
+    image: staskyiv/angular-client
+    build:
+      context: ..
+      dockerfile: TMSClient/Dockerfile
+    ports:
+      - "4200:4200"
+    depends_on:
+      - backend
+    environment:
+      - BACKEND_URL=http://backend:8080
+    networks:
+      - default  # Use default network
+
+  backend:
+    image: staskyiv/backendservice
+    build:
+      context: ..
+      dockerfile: BackendService/Dockerfile
+    environment:
+      AzureServiceBus_ConnectionString: "Endpoint=sb://taskmanagerservicebus.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=ISbUHwEJNPNpVpu7Tn6PZBLSeIlxZCQxO+ASbE1rfIM="
+      ConnectionStrings__SqlServer: "Server=localhost,1433; Database=MyDatabase; User Id=sa; Password=Test12345;TrustServerCertificate=True;"
+    depends_on:
+      - webapi
+      - db
+    networks:
+      - default
+
+  db:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    container_name: sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Test12345
+    ports:
+      - "1433:1433"
+    volumes:
+      - sql-data:/var/opt/mssql
+    networks:
+      - default
+
+volumes:
+  sql-data:
+
+networks:
+  default:
+    driver: bridge
